@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 def main():
     # Cargamos las variables de entorno (KEYs)
     #load_dotenv()
-    st.set_page_config(page_title = "My Home insurance chatbot")
-    st.header("Home insurance chatbot developed by atmira")
+    st.set_page_config(page_title = "Home insurance chatbot")
+    st.header("Welcome to your home insurance chatbot!")
 
     # Inicializacion variables estado sesion: controlar flujo chatbot, almacenar estado actual conversacion e historial del chat
     if "conversation" not in st.session_state:
