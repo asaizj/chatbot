@@ -12,7 +12,10 @@ from dotenv import load_dotenv
 
 def main():
     # Cargamos las variables de entorno (KEYs)
-    #load_dotenv()
+    load_dotenv()
+    # Obtener el valor de la variable de entorno LANGSMITH_API_KEY
+    langsmith_api_key = os.getenv("LANGSMITH_API_KEY")
+
     st.set_page_config(page_title = "My Home insurance chatbot")
     st.header("Home insurance chatbot developed by atmira")
 
@@ -27,23 +30,20 @@ def main():
     with st.sidebar:
         st.subheader("Tus documentos")
         pdf_files = st.file_uploader("Adjunta tu póliza en PDF.", type = ['pdf'], accept_multiple_files = True)
-        openai_api_key = st.text_input("Introduzca API Key de OpenAI", key = "chatbot_api_key", type = "password")
+        #openai_api_key = st.text_input("Introduzca API Key de OpenAI", key = "chatbot_api_key", type = "password")
         process = st.button("Procesar")
-    # Se comprueba si se ha introducido el API Key. Si no, finaliza la ejecucion.    
+    
     if process:
-        #if not openai_api_key:
-        #    st.info("Por favor, introduce tu API Key de OpenAI para continuar.")
-        #    st.stop()
-        #else:
         with st.spinner("Procesando..."):
             # Se cargan los archivos
             files_text = get_pdf_text(pdf_files)
             # Se dividen en chunks
             text_chunks = get_text_chunks(files_text)
             # Se almacenan en la base de datos vectorial
-            vetorstore = get_vectorstore(text_chunks, openai_api_key)
+            vetorstore = get_vectorstore(text_chunks)
+            
         # Se genera una cadena de conversacion
-        st.session_state.conversation = get_conversation_chain(vetorstore, openai_api_key) 
+        st.session_state.conversation = get_conversation_chain(vetorstore) 
 
         st.session_state.processComplete = True
 
@@ -78,7 +78,9 @@ def get_text_chunks(text):
     return chunks
 
 # Recibe una lista de chunks y genera un almacenamiento de vectores utilizando embeddings
-def get_vectorstore(text_chunks, openai_api_key):
+def get_vectorstore(text_chunks):
+    # Obtener el valor de la variable de entorno OPENAI_API_KEY
+    openai_api_key = os.getenv("OPENAI_API_KEY")
     # Embeddings para representar el texto en forma de vectores numericos
     embeddings = OpenAIEmbeddings(openai_api_key = openai_api_key)
     # Se crear un vector store a partir de los chunks (busqueda de vectores)
@@ -86,9 +88,9 @@ def get_vectorstore(text_chunks, openai_api_key):
     return vectorstore
 
 # Se crea una cadena de conversacion utilizando conversaciones anteriores para mejorar la experiencia de usuario
-def get_conversation_chain(vectorstore, openai_api_key):
+def get_conversation_chain(vectorstore):
     # Se crea modelo de lenguaje basado en OpenAI con poca aleatoriedad en las respuesta (temperature)
-    llm = ChatOpenAI(model_name = 'gpt-3.5-turbo', temperature = 0, openai_api_key = openai_api_key)
+    llm = ChatOpenAI(model_name = 'gpt-3.5-turbo', temperature = 0)
     # Se almacena y recupera conversaciones anteriores para mejorar las respuestas
     memory = ConversationBufferMemory(memory_key = 'chat_history', return_messages = True)
     # Se crea cadena de conversacion utilizando el modelo de lenguaje, el recuperador basado en vectores, y la memoria
@@ -144,11 +146,6 @@ def evaluation(llm):
     evaluator = load_evaluator(EvaluatorType.LABELED_CRITERIA, llm = llm, criteria = "correctness") #correctness, relevance, coherence, conciseness
     # Evaluar la precisión y utilidad de las respuestas del modelo
     eval_result = evaluator.evaluate_strings(prediction = respuestas_modelo, reference = respuestas_correctas, input = preguntas)
-    # Obtener los resultados de la evaluación
-    #precision = eval_result['correctness']
-    # utilidad = eval_result['usefulness']
-    # Imprimir los resultados
-    #print("Precisión del chatbot:", precision)
     print(eval_result)
 
 if __name__ == '__main__':
